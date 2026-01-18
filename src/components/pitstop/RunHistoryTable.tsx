@@ -25,6 +25,8 @@ const STORAGE_KEY = "pitstop.runHistoryOpen";
 interface RunHistoryTableProps {
   jobs: PitstopJobListItem[];
   onLoadJob: (job: PitstopJobListItem) => void;
+  /** Handler to open run details drawer */
+  onOpenRun?: (runId: string) => void;
   loadingJobId?: string | null;
   isLoading?: boolean;
   // Pagination props
@@ -70,6 +72,7 @@ const formatJobId = (jobId: string): string => {
 const RunHistoryTable = ({ 
   jobs, 
   onLoadJob, 
+  onOpenRun,
   loadingJobId,
   isLoading = false,
   page,
@@ -202,9 +205,16 @@ const RunHistoryTable = ({
                     <TableRow
                       key={job.job_id}
                       hover
+                      onClick={() => {
+                        // Open drawer on row click (for any job status)
+                        if (onOpenRun && !isCurrentlyLoading) {
+                          onOpenRun(job.job_id);
+                        }
+                      }}
                       sx={{
                         opacity: isCurrentlyLoading ? 0.7 : 1,
-                        "&:hover": { background: "rgba(0, 66, 37, 0.05)" },
+                        cursor: onOpenRun ? "pointer" : "default",
+                        "&:hover": { background: "rgba(0, 66, 37, 0.08)" },
                       }}
                     >
                       <TableCell>
@@ -270,9 +280,14 @@ const RunHistoryTable = ({
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                console.log("PLAY CLICK", job.job_id, { canPlay, isCurrentlyLoading });
+                                console.log("ACTIONS CLICK", job.job_id, { canPlay, isCurrentlyLoading, hasOpenRun: !!onOpenRun });
                                 if (canPlay && !isCurrentlyLoading) {
-                                  onLoadJob(job);
+                                  // Use onOpenRun to open drawer if available, otherwise fall back to onLoadJob
+                                  if (onOpenRun) {
+                                    onOpenRun(job.job_id);
+                                  } else {
+                                    onLoadJob(job);
+                                  }
                                 }
                               }}
                               disabled={!canPlay || isCurrentlyLoading}

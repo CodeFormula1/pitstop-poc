@@ -19,8 +19,10 @@ from app.schemas.pitstop import (
     PitstopJobListItem,
     PitstopJobListResponse,
     PitstopJobResponse,
+    PitstopMetricsUpdate,
+    PitstopRunMetricsOut,
 )
-from app.services import pitstop_service
+from app.services import pitstop_persistence, pitstop_service
 from app.services.storage import get_storage
 from app.settings import ALLOWED_VIDEO_EXTENSIONS, MAX_FILE_SIZE_BYTES
 from app.utils.range_stream import (
@@ -141,6 +143,88 @@ async def get_job(
         raise HTTPException(status_code=404, detail="Job not found")
     
     return PitstopJobResponse.from_job(job)
+
+
+@router.get("/jobs/{job_id}/metrics", response_model=PitstopRunMetricsOut)
+async def get_job_metrics(
+    job_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get timing metrics for a completed pitstop job.
+    
+    Returns metrics with null values if no metrics have been recorded yet.
+    This allows the frontend to always render the metrics UI, showing "--" for missing values.
+    
+    Metrics include:
+    - fuel_time_s: Time for refueling
+    - front_left_tyre_time_s, front_right_tyre_time_s: Front tyre change times
+    - back_left_tyre_time_s, back_right_tyre_time_s: Rear tyre change times  
+    - driver_out_time_s: Time for driver exit
+    - driver_in_time_s: Time for driver entry
+    """
+    # Verify the job exists
+    job = await pitstop_service.get_job(db, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Get metrics (may be None if not recorded yet)
+    metrics = await pitstop_service.get_job_metrics(db, job_id)
+    
+    return PitstopRunMetricsOut.from_summary(metrics, job_id)
+
+
+@router.post("/jobs/{job_id}/metrics", response_model=PitstopRunMetricsOut)
+async def update_job_metrics(
+    job_id: UUID,
+    metrics: PitstopMetricsUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Manually update timing metrics for a pitstop job.
+    
+    This endpoint is useful for:
+    - Testing the UI before the model computes metrics automatically
+    - Manual corrections to computed metrics
+    
+    Only provided fields will be updated. Example request body:
+    ```json
+    {
+        "fuel_time_s": 0.42,
+        "front_left_tyre_time_s": 0.38
+    }
+    ```
+    
+    Returns the updated metrics.
+    """
+    # Verify the job exists
+    job = await pitstop_service.get_job(db, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Get payload with only non-None values
+    payload = metrics.to_payload()
+    
+    if not payload:
+        raise HTTPException(
+            status_code=400,
+            detail="No metrics provided. Include at least one metric field.",
+        )
+    
+    # Upsert the breakdown summary
+    summary = await pitstop_persistence.upsert_breakdown_summary(db, job_id, payload)
+    
+    return PitstopRunMetricsOut.from_summary(summary, job_id)
+
+
+# Backward compatibility alias
+@router.get("/runs/{run_id}/metrics", response_model=PitstopRunMetricsOut, include_in_schema=False)
+async def get_run_metrics_legacy(
+    run_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Legacy endpoint - redirects to /jobs/{job_id}/metrics."""
+    return await get_job_metrics(run_id, db)
 
 
 @router.get("/jobs/{job_id}/output")

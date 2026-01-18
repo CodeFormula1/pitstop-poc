@@ -6,6 +6,7 @@ import type {
   JobMetadata, 
   CreateJobResponse,
   PitstopJobListResponse,
+  PitstopRunMetrics,
 } from "../types/pitstop";
 
 /** Base URL for the Pitstop API - configurable via env */
@@ -152,4 +153,26 @@ export async function deleteJob(jobId: string): Promise<void> {
     );
   }
 }
+
+/**
+ * Get timing metrics for a pitstop job.
+ * 
+ * @param jobId - The job ID to fetch metrics for
+ * @returns The job metrics (values may be null if not recorded)
+ */
+export async function getJobMetrics(jobId: string): Promise<PitstopRunMetrics> {
+  const response = await fetch(`${PITSTOP_API_BASE}/api/pitstop/jobs/${jobId}/metrics`);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail || `Failed to fetch metrics: ${response.status} ${response.statusText}`
+    );
+  }
+
+  return response.json();
+}
+
+/** @deprecated Use getJobMetrics instead */
+export const getRunMetrics = getJobMetrics;
 

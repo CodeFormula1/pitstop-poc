@@ -8,13 +8,13 @@ import AdjustOutlinedIcon from "@mui/icons-material/AdjustOutlined";
 import RadioButtonCheckedOutlinedIcon from "@mui/icons-material/RadioButtonCheckedOutlined";
 import GlassCard from "../GlassCard";
 
-/** Pitstop timing metrics (all in seconds) */
+/** Pitstop timing metrics (all in seconds) - matches backend PitstopRunMetrics */
 export interface PitstopMetrics {
   fuel_time_s?: number | null;
-  fl_tyre_time_s?: number | null;
-  fr_tyre_time_s?: number | null;
-  bl_tyre_time_s?: number | null;
-  br_tyre_time_s?: number | null;
+  front_left_tyre_time_s?: number | null;
+  front_right_tyre_time_s?: number | null;
+  back_left_tyre_time_s?: number | null;
+  back_right_tyre_time_s?: number | null;
   driver_out_time_s?: number | null;
   driver_in_time_s?: number | null;
 }
@@ -143,10 +143,10 @@ const ROW1_CONFIG: { key: keyof PitstopMetrics; label: string; icon: React.React
 
 /** Row 2 metrics: Tyres (FL, FR, BL, BR) */
 const ROW2_CONFIG: { key: keyof PitstopMetrics; label: string; icon: React.ReactNode; pill: string }[] = [
-  { key: "fl_tyre_time_s", label: "Front Left", icon: <DonutSmallOutlinedIcon />, pill: "FL" },
-  { key: "fr_tyre_time_s", label: "Front Right", icon: <DonutLargeOutlinedIcon />, pill: "FR" },
-  { key: "bl_tyre_time_s", label: "Back Left", icon: <AdjustOutlinedIcon />, pill: "BL" },
-  { key: "br_tyre_time_s", label: "Back Right", icon: <RadioButtonCheckedOutlinedIcon />, pill: "BR" },
+  { key: "front_left_tyre_time_s", label: "Front Left", icon: <DonutSmallOutlinedIcon />, pill: "FL" },
+  { key: "front_right_tyre_time_s", label: "Front Right", icon: <DonutLargeOutlinedIcon />, pill: "FR" },
+  { key: "back_left_tyre_time_s", label: "Back Left", icon: <AdjustOutlinedIcon />, pill: "BL" },
+  { key: "back_right_tyre_time_s", label: "Back Right", icon: <RadioButtonCheckedOutlinedIcon />, pill: "BR" },
 ];
 
 /** Combined config for checking if any metric exists */

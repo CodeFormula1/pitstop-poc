@@ -71,6 +71,18 @@ export interface PitstopJobListResponse {
   offset: number;
 }
 
+/** Timing metrics for a pitstop job from GET /api/pitstop/jobs/{job_id}/metrics */
+export interface PitstopRunMetrics {
+  job_id: string;
+  fuel_time_s: number | null;
+  front_left_tyre_time_s: number | null;
+  front_right_tyre_time_s: number | null;
+  back_left_tyre_time_s: number | null;
+  back_right_tyre_time_s: number | null;
+  driver_out_time_s: number | null;
+  driver_in_time_s: number | null;
+}
+
 /** UI-level job status (combines backend status with upload phase) */
 export type UIJobStatus = 
   | "idle" 

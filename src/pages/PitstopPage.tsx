@@ -9,10 +9,11 @@ import JobProgress from "../components/pitstop/JobProgress";
 import ResultsPanel from "../components/pitstop/ResultsPanel";
 import MetricsPanel from "../components/pitstop/MetricsPanel";
 import RunHistoryTable from "../components/pitstop/RunHistoryTable";
+import RunDetailsDrawer from "../components/pitstop/RunDetailsDrawer";
 import type { PitstopMetrics } from "../components/pitstop/MetricsPanel";
 import type { PitstopJob, PitstopJobListItem, UIJobStatus } from "../types/pitstop";
 import { mapBackendToUIStatus } from "../types/pitstop";
-import { createJob, getJob, getJobs, getOutputUrl, downloadOutput } from "../api/pitstopClient";
+import { createJob, getJob, getJobs, getJobMetrics, getOutputUrl, downloadOutput } from "../api/pitstopClient";
 
 const getStatusChipProps = (status: UIJobStatus) => {
   switch (status) {
@@ -35,24 +36,13 @@ const getStatusChipProps = (status: UIJobStatus) => {
 
 const POLL_INTERVAL_MS = 1500;
 
-/** Mock metrics data to show when a job is complete (placeholder until API integration) */
-const MOCK_METRICS: PitstopMetrics = {
-  fuel_time_s: 0.42,
-  fl_tyre_time_s: 0.38,
-  fr_tyre_time_s: 0.41,
-  bl_tyre_time_s: 0.39,
-  br_tyre_time_s: 0.40,
-  driver_out_time_s: 2.15,
-  driver_in_time_s: 2.28,
-};
-
 /** Empty metrics (all nulls) */
 const EMPTY_METRICS: PitstopMetrics = {
   fuel_time_s: null,
-  fl_tyre_time_s: null,
-  fr_tyre_time_s: null,
-  bl_tyre_time_s: null,
-  br_tyre_time_s: null,
+  front_left_tyre_time_s: null,
+  front_right_tyre_time_s: null,
+  back_left_tyre_time_s: null,
+  back_right_tyre_time_s: null,
   driver_out_time_s: null,
   driver_in_time_s: null,
 };
@@ -84,6 +74,14 @@ const PitstopPage = () => {
   const [page, setPage] = useState(1); // 1-based for UI
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [totalJobs, setTotalJobs] = useState(0);
+
+  // Drawer state for viewing run details
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+
+  // Metrics state
+  const [metrics, setMetrics] = useState<PitstopMetrics>(EMPTY_METRICS);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
 
   // Refs for polling and UI
   const pollIntervalRef = useRef<number | null>(null);
@@ -176,6 +174,29 @@ const PitstopPage = () => {
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
+  // Fetch metrics for a job
+  const fetchMetrics = useCallback(async (id: string) => {
+    setIsLoadingMetrics(true);
+    try {
+      const metricsData = await getJobMetrics(id);
+      setMetrics({
+        fuel_time_s: metricsData.fuel_time_s,
+        front_left_tyre_time_s: metricsData.front_left_tyre_time_s,
+        front_right_tyre_time_s: metricsData.front_right_tyre_time_s,
+        back_left_tyre_time_s: metricsData.back_left_tyre_time_s,
+        back_right_tyre_time_s: metricsData.back_right_tyre_time_s,
+        driver_out_time_s: metricsData.driver_out_time_s,
+        driver_in_time_s: metricsData.driver_in_time_s,
+      });
+    } catch (err) {
+      console.error("Failed to fetch metrics:", err);
+      // Don't show error - metrics are non-critical
+      setMetrics(EMPTY_METRICS);
+    } finally {
+      setIsLoadingMetrics(false);
+    }
+  }, []);
+
   // Fetch output video as blob when job completes
   const fetchOutputAsBlob = useCallback(async (id: string) => {
     setIsLoadingOutput(true);
@@ -235,6 +256,8 @@ const PitstopPage = () => {
         stopPolling();
         // Fetch output video as blob for reliable playback
         fetchOutputAsBlob(id);
+        // Fetch metrics from API
+        fetchMetrics(id);
       } else if (jobData.status === "FAILED") {
         setError("Job processing failed. Check logs for details.");
         stopPolling();
@@ -244,7 +267,7 @@ const PitstopPage = () => {
       setError(err instanceof Error ? err.message : "Failed to fetch job status");
       stopPolling();
     }
-  }, [stopPolling, fetchOutputAsBlob]);
+  }, [stopPolling, fetchOutputAsBlob, fetchMetrics]);
 
   // Start polling
   const startPolling = useCallback((id: string) => {
@@ -281,6 +304,7 @@ const PitstopPage = () => {
     setJobId(null);
     setJob(null);
     setError(null);
+    setMetrics(EMPTY_METRICS);
   }, [fileUrl, stopPolling, cleanupBlobUrls]);
 
   // Run the job
@@ -341,6 +365,7 @@ const PitstopPage = () => {
     setJobId(null);
     setJob(null);
     setError(null);
+    setMetrics(EMPTY_METRICS);
   }, [fileUrl, stopPolling, cleanupBlobUrls]);
 
   // Download output
@@ -383,8 +408,11 @@ const PitstopPage = () => {
       setOutputUrl(getOutputUrl(historyJob.job_id));
       setError(null);
       
-      // Fetch output video as blob
-      await fetchOutputAsBlob(historyJob.job_id);
+      // Fetch output video as blob and metrics
+      await Promise.all([
+        fetchOutputAsBlob(historyJob.job_id),
+        fetchMetrics(historyJob.job_id),
+      ]);
       
     } catch (err) {
       console.error("Error loading job from history:", err);
@@ -392,7 +420,7 @@ const PitstopPage = () => {
     } finally {
       setLoadingJobId(null);
     }
-  }, [stopPolling, cleanupBlobUrls, fetchOutputAsBlob]);
+  }, [stopPolling, cleanupBlobUrls, fetchOutputAsBlob, fetchMetrics]);
 
   // Pagination handlers
   const handlePageChange = useCallback((newPage: number) => {
@@ -402,6 +430,18 @@ const PitstopPage = () => {
   const handleRowsPerPageChange = useCallback((newRowsPerPage: number) => {
     setRowsPerPage(newRowsPerPage);
     setPage(1); // Reset to first page when changing rows per page
+  }, []);
+
+  // Open run details drawer
+  const handleOpenRunDetails = useCallback((runId: string) => {
+    console.log("ACTIONS CLICK - Opening drawer for:", runId);
+    setSelectedRunId(runId);
+    setDrawerOpen(true);
+  }, []);
+
+  // Close run details drawer
+  const handleCloseDrawer = useCallback(() => {
+    setDrawerOpen(false);
   }, []);
 
   // Computed values
@@ -579,7 +619,7 @@ const PitstopPage = () => {
               transition={{ duration: 0.4, delay: 0.35 }}
             >
               <MetricsPanel
-                metrics={status === "complete" ? MOCK_METRICS : EMPTY_METRICS}
+                metrics={metrics}
                 status={status}
               />
             </motion.div>
@@ -595,6 +635,7 @@ const PitstopPage = () => {
               <RunHistoryTable 
                 jobs={runHistory} 
                 onLoadJob={handleLoadJob}
+                onOpenRun={handleOpenRunDetails}
                 loadingJobId={loadingJobId}
                 isLoading={isLoadingHistory}
                 page={page}
@@ -631,6 +672,13 @@ const PitstopPage = () => {
             border: "1px solid rgba(47, 174, 142, 0.3)",
           },
         }}
+      />
+
+      {/* Run details drawer */}
+      <RunDetailsDrawer
+        open={drawerOpen}
+        runId={selectedRunId}
+        onClose={handleCloseDrawer}
       />
     </PageTransition>
   );

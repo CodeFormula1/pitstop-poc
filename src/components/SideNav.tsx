@@ -25,6 +25,8 @@ const SideNav = () => {
     <Drawer variant="permanent" sx={{ width: 240, flexShrink: 0 }}>
       <Box sx={{ width: 240, display: "flex", flexDirection: "column", height: "100%" }}>
         <Box
+          component={NavLink}
+          to="/"
           sx={{
             px: 3,
             height: HEADER_HEIGHT,
@@ -33,6 +35,12 @@ const SideNav = () => {
             justifyContent: "center",
             borderBottom: "1px solid",
             borderColor: "divider",
+            textDecoration: "none",
+            cursor: "pointer",
+            transition: "opacity 0.2s ease",
+            "&:hover": {
+              opacity: 0.8,
+            },
           }}
         >
           <Typography

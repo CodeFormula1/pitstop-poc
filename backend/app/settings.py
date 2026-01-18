@@ -24,6 +24,20 @@ PITSTOP_YOLO_WEIGHTS_PATH = os.getenv(
 )
 PITSTOP_YOLO_THRESHOLD = float(os.getenv("PITSTOP_YOLO_THRESHOLD", "0.5"))
 
+# Processing mode: "classic" (bbox annotate) or "time_in_zone" (supervision-based tracking)
+PITSTOP_MODE = os.getenv("PITSTOP_MODE", "time_in_zone")
+
+# Zone configuration for time_in_zone mode
+ZONE_CONFIG_PATH = os.getenv(
+    "ZONE_CONFIG_PATH",
+    str(BASE_DIR / "app" / "model" / "zone_timing" / "sample_zones.json")
+)
+
+# Time-in-zone settings
+PITSTOP_IOU_THRESHOLD = float(os.getenv("PITSTOP_IOU_THRESHOLD", "0.5"))
+PITSTOP_TARGET_WIDTH = int(os.getenv("PITSTOP_TARGET_WIDTH", "1020"))
+PITSTOP_TARGET_HEIGHT = int(os.getenv("PITSTOP_TARGET_HEIGHT", "500"))
+
 # Database
 DATABASE_URL = os.getenv(
     "DATABASE_URL",

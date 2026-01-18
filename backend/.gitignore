@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+env/
+
+# Storage (local dev files)
+storage/input/*
+storage/output/*
+storage/logs/*
+!storage/input/.gitkeep
+!storage/output/.gitkeep
+!storage/logs/.gitkeep
+
+# Model weights (large binary files - do not commit)
+model_weights/*.pt
+model_weights/*.pth
+model_weights/*.onnx
+!model_weights/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Distribution
+dist/
+build/
+*.egg-info/
+

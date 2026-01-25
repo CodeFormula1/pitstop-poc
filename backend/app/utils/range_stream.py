@@ -111,3 +111,4 @@ def get_file_size(path: str) -> int:
     """Get the size of a file in bytes."""
     return os.path.getsize(path)
 
+

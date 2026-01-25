@@ -111,3 +111,4 @@ def draw_zones(frame: np.ndarray, polygons: List[np.ndarray]) -> np.ndarray:
     
     return annotated_frame
 
+

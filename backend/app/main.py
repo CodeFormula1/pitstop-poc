@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes_pitstop import router as pitstop_router
 from app.settings import API_PREFIX, CORS_ORIGINS
@@ -52,4 +53,8 @@ async def root():
         "docs": "/docs",
         "health": "/api/health",
     }
+
+
+# Serve frontend static files (Vite build) - must be last to not override API routes
+app.mount("/", StaticFiles(directory="/app/frontend_dist", html=True), name="frontend")
 

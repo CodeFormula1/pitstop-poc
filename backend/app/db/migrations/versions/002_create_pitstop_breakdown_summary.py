@@ -44,3 +44,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("pitstop_breakdown_summary")
 
+

@@ -113,3 +113,4 @@ def downgrade() -> None:
     op.drop_column("pitstop_jobs", "error_message")
     op.drop_column("pitstop_jobs", "mode")
 
+
